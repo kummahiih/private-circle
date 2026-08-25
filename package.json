@@ -1,0 +1,41 @@
+{
+  "name": "@kummahiih/private-circle",
+  "version": "0.1.0",
+  "description": "Client-side gated static pages with page-scoped PBKDF2 or WebAuthn PRF unlock. No passwords in git.",
+  "type": "module",
+  "bin": {
+    "private-circle": "./bin/cli.mjs"
+  },
+  "exports": {
+    ".": "./src/index.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "assets",
+    "templates"
+  ],
+  "scripts": {
+    "test": "node --test test/*.mjs",
+    "encrypt": "node bin/cli.mjs encrypt"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "webauthn",
+    "prf",
+    "pbkdf2",
+    "static",
+    "encryption",
+    "offline",
+    "gate",
+    "aes-gcm",
+    "passkey"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kummahiih/private-circle"
+  }
+}
