@@ -1,0 +1,140 @@
+#!/usr/bin/env node
+/**
+ * CLI for @kummahiih/private-circle
+ *
+ *   private-circle encrypt --page-id my-site --content content/index.html --hashes hashes --out dist
+ *   private-circle init
+ */
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { encryptPage, normalizePageId } from '../src/encrypt.mjs';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function usage() {
+  console.log(`
+Usage:
+  private-circle encrypt --page-id <id> --content <file> --hashes <dir> --out <dir>
+  private-circle init [--dir <path>]
+
+Examples:
+  private-circle encrypt --page-id hello-circle --content content/index.html --hashes hashes --out dist
+  private-circle init
+`);
+}
+
+function parseArgs(argv) {
+  const out = {
+    command: argv[2] || '',
+    content: 'content/index.html',
+    hashes: 'hashes',
+    outDir: 'dist',
+    pageId: '',
+    dir: '.',
+  };
+  for (let i = 3; i < argv.length; i++) {
+    if (argv[i] === '--content') out.content = argv[++i];
+    else if (argv[i] === '--hashes') out.hashes = argv[++i];
+    else if (argv[i] === '--out') out.outDir = argv[++i];
+    else if (argv[i] === '--page-id') out.pageId = argv[++i];
+    else if (argv[i] === '--dir') out.dir = argv[++i];
+  }
+  return out;
+}
+
+function cmdEncrypt(args) {
+  const result = encryptPage({
+    pageId: args.pageId,
+    content: args.content,
+    hashes: args.hashes,
+    outDir: args.outDir,
+  });
+  console.log('pageId:', result.pageId);
+  console.log('Wrote', path.join(args.outDir, 'index.html'));
+  console.log('Entries:', result.entries);
+  if (result.enrollCopied) {
+    console.log('Copied public enroll page →', path.join(args.outDir, 'enroll.html'));
+  } else {
+    console.log('Note: no enroll.html found (optional)');
+  }
+}
+
+function cmdInit(args) {
+  const root = path.resolve(args.dir);
+  const dirs = ['content', 'hashes'];
+  for (const d of dirs) {
+    fs.mkdirSync(path.join(root, d), { recursive: true });
+  }
+
+  // copy enroll.html from package assets
+  const enrollSrc = path.join(__dirname, '..', 'assets', 'enroll.html');
+  if (fs.existsSync(enrollSrc)) {
+    fs.copyFileSync(enrollSrc, path.join(root, 'enroll.html'));
+    console.log('Created enroll.html');
+  }
+
+  const contentPath = path.join(root, 'content', 'index-plaintext.html');
+  if (!fs.existsSync(contentPath)) {
+    fs.writeFileSync(
+      contentPath,
+      `<!DOCTYPE html>
+<html lang="fi">
+<head><meta charset="UTF-8"><title>Private circle</title></head>
+<body>
+  <h1>Tervetuloa</h1>
+  <p>Tämä sivu on salattu. Vain rekisteröityneet jäsenet näkevät sisällön.</p>
+</body>
+</html>
+`,
+      'utf8'
+    );
+    console.log('Created content/index-plaintext.html');
+  }
+
+  const vercelPath = path.join(root, 'vercel.json');
+  if (!fs.existsSync(vercelPath)) {
+    fs.writeFileSync(
+      vercelPath,
+      JSON.stringify(
+        {
+          buildCommand:
+            'npx @kummahiih/private-circle encrypt --page-id YOUR-PAGE-ID --content content/index-plaintext.html --hashes hashes --out dist',
+          outputDirectory: 'dist',
+          cleanUrls: true,
+        },
+        null,
+        2
+      ) + '\n',
+      'utf8'
+    );
+    console.log('Created vercel.json (edit YOUR-PAGE-ID)');
+  }
+
+  console.log('\nNext steps:');
+  console.log('  1. Edit content/index-plaintext.html');
+  console.log('  2. Collect enroll JSON files into hashes/');
+  console.log('  3. Set pageId in vercel.json / package.json scripts');
+  console.log('  4. Deploy (Vercel will run the encrypt step)');
+}
+
+const args = parseArgs(process.argv);
+
+if (args.command === 'encrypt') {
+  if (!args.pageId) {
+    console.error('Missing --page-id');
+    usage();
+    process.exit(1);
+  }
+  try {
+    cmdEncrypt(args);
+  } catch (e) {
+    console.error(e.message || e);
+    process.exit(1);
+  }
+} else if (args.command === 'init') {
+  cmdInit(args);
+} else {
+  usage();
+  process.exit(args.command ? 1 : 0);
+}
