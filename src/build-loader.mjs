@@ -33,16 +33,22 @@ export function buildLoaderHtml() {
 
 /**
  * Per-build secrets consumed by gate.js (not executable code).
+ * Single-file: cipher + iv at top level (v1 compat).
+ * Multifile: files map { relPath: { iv, cipher } }; top-level cipher is primary (usually index.html).
  */
-export function buildGateConfig({ pageId, share1B64, ivB64, cipherB64, entries }) {
-  return {
-    v: 1,
+export function buildGateConfig({ pageId, share1B64, ivB64, cipherB64, entries, files }) {
+  const cfg = {
+    v: files ? 2 : 1,
     pageId,
     share1: share1B64,
     iv: ivB64,
     cipher: cipherB64,
     entries,
   };
+  if (files && Object.keys(files).length) {
+    cfg.files = files;
+  }
+  return cfg;
 }
 
 /** @deprecated use buildLoaderHtml + buildGateConfig */

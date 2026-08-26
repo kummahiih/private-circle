@@ -1,5 +1,6 @@
 /**
- * Encrypt page and write dist/ (strict-CSP friendly: no inline scripts).
+ * Encrypt page (file or directory) and write dist/ (strict-CSP friendly: no inline scripts).
+ * Same K for all assets; per-file IV. Single-file cipher kept for backward compat.
  */
 import fs from 'fs';
 import path from 'path';
@@ -15,6 +16,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ASSETS = path.join(__dirname, '..', 'assets');
 const require = createRequire(import.meta.url);
 
+const TEXT_EXTS = new Set(['.html', '.js', '.css']);
+
 function resolveEnrollAssets() {
   try {
     const pkgJson = require.resolve('@kummahiih/circle-enroll/package.json');
@@ -25,7 +28,48 @@ function resolveEnrollAssets() {
 }
 
 /**
- * Encrypt a clear HTML page and write the gated loader to outDir.
+ * Collect relative paths of encryptable text assets under root.
+ * @param {string} root
+ * @returns {string[]}
+ */
+function listContentAssets(root) {
+  const out = [];
+  function walk(dir, rel) {
+    for (const name of fs.readdirSync(dir)) {
+      if (name.startsWith('.')) continue;
+      const full = path.join(dir, name);
+      const r = rel ? path.join(rel, name) : name;
+      const st = fs.statSync(full);
+      if (st.isDirectory()) {
+        walk(full, r);
+        continue;
+      }
+      if (TEXT_EXTS.has(path.extname(name).toLowerCase())) {
+        out.push(r.replace(/\\/g, '/'));
+      }
+    }
+  }
+  walk(root, '');
+  return out.sort();
+}
+
+/**
+ * AES-256-GCM encrypt buffer with given K and fresh IV.
+ * @returns {{ iv: Buffer, cipherFull: Buffer }}
+ */
+function encryptBuf(K, plain) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', K, iv);
+  const encBody = Buffer.concat([cipher.update(plain), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return { iv, cipherFull: Buffer.concat([encBody, tag]) };
+}
+
+/**
+ * Encrypt clear content (single file or directory of html/js/css) and write gated loader to outDir.
+ *
+ * --content file  → single-file mode (cipher + iv at top level for compat)
+ * --content dir   → multifile: files{} map, same K; refuse plaintext content/* in dist
  *
  * Outputs (CSP-safe):
  *   index.html       — shell only (script-src 'self')
@@ -44,18 +88,57 @@ export function encryptPage(opts) {
     throw new Error('Invalid pageId. Use a-z, 0-9, ".", "_", "-"');
   }
 
-  const clear = fs.readFileSync(opts.content);
+  const contentPath = path.resolve(opts.content);
+  if (!fs.existsSync(contentPath)) {
+    throw new Error('content path not found: ' + opts.content);
+  }
+
+  const isDir = fs.statSync(contentPath).isDirectory();
   const enrolls = loadHashes(opts.hashes, pageId);
 
   const K = crypto.randomBytes(32);
   const share1 = crypto.randomBytes(32);
   const share2 = xorBuf(K, share1);
-  const iv = crypto.randomBytes(12);
 
-  const cipher = crypto.createCipheriv('aes-256-gcm', K, iv);
-  const encBody = Buffer.concat([cipher.update(clear), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  const cipherFull = Buffer.concat([encBody, tag]);
+  /** @type {Record<string, { iv: string, cipher: string }> } */
+  const files = {};
+  let primaryCipherB64 = null;
+  let primaryIvB64 = null;
+  const markers = opts.plaintextMarkers ? [...opts.plaintextMarkers] : [];
+
+  if (isDir) {
+    const assets = listContentAssets(contentPath);
+    if (!assets.length) {
+      throw new Error('content directory has no .html/.js/.css files: ' + opts.content);
+    }
+    for (const rel of assets) {
+      const plain = fs.readFileSync(path.join(contentPath, rel));
+      const { iv, cipherFull } = encryptBuf(K, plain);
+      files[rel] = { iv: b64(iv), cipher: b64(cipherFull) };
+      if (!markers.length) {
+        const m = plain.toString('utf8').match(/MARKER-[A-Z0-9-]+/);
+        if (m) markers.push(m[0]);
+      }
+    }
+    // Prefer index.html as primary for single-field compat if present
+    const primaryKey =
+      files['index.html'] ? 'index.html' :
+      files['index-plaintext.html'] ? 'index-plaintext.html' :
+      Object.keys(files).find((k) => k.endsWith('.html')) || Object.keys(files)[0];
+    primaryIvB64 = files[primaryKey].iv;
+    primaryCipherB64 = files[primaryKey].cipher;
+  } else {
+    const clear = fs.readFileSync(contentPath);
+    const { iv, cipherFull } = encryptBuf(K, clear);
+    primaryIvB64 = b64(iv);
+    primaryCipherB64 = b64(cipherFull);
+    const base = path.basename(contentPath);
+    files[base] = { iv: primaryIvB64, cipher: primaryCipherB64 };
+    if (!markers.length) {
+      const m = clear.toString('utf8').match(/MARKER-[A-Z0-9-]+/);
+      if (m) markers.push(m[0]);
+    }
+  }
 
   const entries = enrolls.map((e) => {
     const mask = xorBuf(e.hash, share2);
@@ -80,6 +163,14 @@ export function encryptPage(opts) {
     );
   }
 
+  // Never copy plaintext content into dist
+  if (isDir) {
+    const leak = path.join(opts.outDir, 'content');
+    if (fs.existsSync(leak)) {
+      throw new Error('outDir already contains content/ — refuse plaintext leak');
+    }
+  }
+
   fs.writeFileSync(path.join(opts.outDir, 'index.html'), buildLoaderHtml(), 'utf8');
   fs.writeFileSync(
     path.join(opts.outDir, 'gate-config.json'),
@@ -87,9 +178,10 @@ export function encryptPage(opts) {
       buildGateConfig({
         pageId,
         share1B64: b64(share1),
-        ivB64: b64(iv),
-        cipherB64: b64(cipherFull),
+        ivB64: primaryIvB64,
+        cipherB64: primaryCipherB64,
         entries,
+        files: isDir ? files : undefined,
       })
     ),
     'utf8'
@@ -131,14 +223,13 @@ export function encryptPage(opts) {
     }
   }
 
-  const markers = opts.plaintextMarkers || [];
-  // Auto-detect a simple marker from content if caller did not pass any
-  if (!markers.length) {
-    const clearText = clear.toString('utf8');
-    const m = clearText.match(/MARKER-[A-Z0-9-]+/);
-    if (m) markers.push(m[0]);
-  }
   assertDistHygiene(opts.outDir, { plaintextMarkers: markers });
 
-  return { pageId, entries: entries.length, enrollCopied };
+  return {
+    pageId,
+    entries: entries.length,
+    enrollCopied,
+    files: Object.keys(files).length,
+    multifile: isDir,
+  };
 }

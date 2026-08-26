@@ -13,8 +13,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function usage() {
   console.log(`
 Usage:
-  private-circle encrypt --page-id <id> --content <file> --hashes <dir> --out <dir>
+  private-circle encrypt --page-id <id> --content <file|dir> --hashes <dir> --out <dir>
   private-circle init [--dir <path>]
+
+  --content  single HTML file (v1) or directory of .html/.js/.css (multifile, same K)
 `);
 }
 
@@ -47,6 +49,9 @@ function cmdEncrypt(args) {
   console.log('pageId:', result.pageId);
   console.log('Wrote', path.join(args.outDir, 'index.html'));
   console.log('Entries:', result.entries);
+  if (result.multifile) {
+    console.log('Multifile assets:', result.files);
+  }
   if (result.enrollCopied) {
     console.log('Copied public enroll page →', path.join(args.outDir, 'enroll.html'));
   } else {
