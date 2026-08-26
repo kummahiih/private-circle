@@ -13,14 +13,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Encrypt a clear HTML page and write the gated loader (+ optional enroll.html) to outDir.
- *
- * @param {object} opts
- * @param {string} opts.pageId
- * @param {string} opts.content   path to plaintext HTML
- * @param {string} opts.hashes    path to directory of enroll JSON files
- * @param {string} opts.outDir    output directory (usually "dist")
- * @param {string[]} [opts.enrollSearchPaths] extra places to look for enroll.html
- * @returns {{ pageId: string, entries: number, enrollCopied: boolean }}
  */
 export function encryptPage(opts) {
   const pageId = normalizePageId(opts.pageId);
@@ -72,18 +64,24 @@ export function encryptPage(opts) {
     'utf8'
   );
 
-  // Copy public enrollment page if present
+  // Copy public enrollment page (+ JS pieces) if present
   const enrollCandidates = [
     ...(opts.enrollSearchPaths || []),
     path.join(process.cwd(), 'enroll.html'),
     path.join(process.cwd(), 'assets', 'enroll.html'),
-    path.join(__dirname, '..', 'assets', 'enroll.html'), // package asset
+    path.join(__dirname, '..', 'assets', 'enroll.html'),
   ];
   let enrollCopied = false;
   for (const src of enrollCandidates) {
     if (fs.existsSync(src) && fs.statSync(src).isFile()) {
-      const dest = path.join(opts.outDir, 'enroll.html');
-      fs.copyFileSync(src, dest);
+      fs.copyFileSync(src, path.join(opts.outDir, 'enroll.html'));
+      const dir = path.dirname(src);
+      for (const extra of ['enroll-core.js', 'enroll-prf.js']) {
+        const extraSrc = path.join(dir, extra);
+        if (fs.existsSync(extraSrc)) {
+          fs.copyFileSync(extraSrc, path.join(opts.outDir, extra));
+        }
+      }
       enrollCopied = true;
       break;
     }
