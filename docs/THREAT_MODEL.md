@@ -35,17 +35,17 @@
 
 ### Critical
 - [x] **Never publish `hashes/` or enroll JSON** alongside dist. Documented; `encryptPage` post-check + CI `npm pack` guard.
+- [x] **PRF enroll only on production origin** (same RP ID as gate). Documented in README operator runbook + circle-enroll.
 - [ ] **Treat weak-password circles as public-readable** under offline attack; enforce strong passwords or PRF-only.
-- [ ] **PRF enroll only on production origin** (same RP ID as gate).
 
 ### High
-- [ ] Keep **password backup enrollment** if PRF is primary (recovery path).
-- [ ] **Rotate build (`K`)** and re-enroll when any hash set may have leaked.
+- [x] Keep **password backup enrollment** if PRF is primary (recovery path). Documented in README operator runbook + security.md.
+- [x] **Rotate build (`K`)** and re-enroll when any hash set may have leaked. Documented in README operator runbook.
 - [ ] Ensure deployed **HTTP CSP** matches loader meta (no `'unsafe-inline'`).
 - [x] Remove or stop shipping **duplicate enroll sources** in package `assets/` once circle-enroll is sole source (reduce drift).
 
 ### Medium
-- [x] Rate-limit is impossible client-side; document offline threat in user-facing security notes (already partially in `assets/security.md`).
+- [x] Rate-limit is impossible client-side; document offline threat in user-facing security notes (already in `assets/security.md`).
 - [ ] Consider **SRI** for gate.js when operators mirror assets.
 - [x] CI check: fail if dist contains plaintext markers from content / `hashes/` folder.
 

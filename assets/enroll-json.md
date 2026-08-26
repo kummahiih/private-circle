@@ -63,3 +63,10 @@ enroll.html?page=metsa-piiri
 ```
 
 pre-fills the pageId field.
+
+## Production ops (summary)
+
+- **PRF:** enroll and gate must share the same origin (RP ID). Prefer PRF for high-value circles; keep a password backup if recovery is required.
+- **Hashes:** never commit real enroll JSON to public git; never ship with `dist/`. Rotate build key `K` and re-enroll if hashes may have leaked with masks.
+
+See package README operator runbook and `docs/THREAT_MODEL.md`.

@@ -14,6 +14,13 @@
 - Anyone who obtains both enroll `hash` and published `mask`
 - Passkey loss / no recovery: if the only unlock is PRF and the authenticator is lost, content is unrecoverable (keep a password backup or recovery path)
 
+## Operator runbook (production)
+
+1. **Same-origin enroll for PRF** — Host enroll on the gated page’s origin (RP ID match). Cross-origin public enroll is PBKDF2-only.
+2. **Prefer WebAuthn-PRF** for high-value circles; keep a password backup enrollment if recovery is required.
+3. **Never commit real `hashes/`** to public git; **never publish `hashes/` with `dist/`**.
+4. **Rotate `K` + re-enroll** when any hash set may have leaked with published masks.
+
 ## Hashes hygiene (critical)
 
 - **Never commit real `hashes/`** (enroll JSON with live user hashes) to a public repo. Demo hashes are the only exception and must be labeled as such.

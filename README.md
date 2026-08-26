@@ -58,6 +58,15 @@ Enroll assets come from `@kummahiih/circle-enroll` (`init` / encrypt resolve the
 
 See package `enroll-json.md` for the exact JSON format.
 
+## Operator runbook (production)
+
+1. **Same-origin enroll for PRF** — Serve `enroll.html` on the **same origin** as the gated page. WebAuthn RP ID binds the passkey; cross-origin public enroll works for PBKDF2 only.
+2. **Prefer WebAuthn-PRF** for high-value circles. Keep a **password backup** enrollment if recovery after authenticator loss is required (passkey-only = permanent lockout on loss).
+3. **Hashes hygiene** — Never commit real `hashes/` to public git; never ship `hashes/` inside `dist/`. Vault or delete after deploy. Demo sites may keep labeled public demo hashes only.
+4. **Rotate on leak** — If any hash set may have leaked with published masks, rotate build key `K`, re-encrypt, and re-enroll everyone.
+
+See also [`assets/security.md`](assets/security.md), [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md), and [`@kummahiih/circle-enroll` README](https://github.com/kummahiih/circle-enroll#operator-runbook-production).
+
 ## Hashes hygiene
 
 | Rule | Why |
