@@ -11,5 +11,5 @@ export {
 } from './util.mjs';
 
 export { loadHashes } from './load-hashes.mjs';
-export { buildLoader } from './build-loader.mjs';
+export { buildLoader, buildLoaderHtml, buildGateConfig } from './build-loader.mjs';
 export { encryptPage } from './encrypt-page.mjs';
