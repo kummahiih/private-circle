@@ -50,5 +50,5 @@
 - [x] CI check: fail if dist contains plaintext markers from content / `hashes/` folder.
 
 ### Low
-- [ ] Expand tests for enroll.css copy path and CSP meta snapshots.
-- [ ] Document browser matrix for WebAuthn PRF.
+- [x] Expand tests for enroll.css copy path and CSP meta snapshots.
+- [x] Document browser matrix for WebAuthn PRF.
