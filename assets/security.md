@@ -14,11 +14,19 @@
 - Anyone who obtains both enroll `hash` and published `mask`
 - Passkey loss / no recovery: if the only unlock is PRF and the authenticator is lost, content is unrecoverable (keep a password backup or recovery path)
 
+## Hashes hygiene (critical)
+
+- **Never commit real `hashes/`** (enroll JSON with live user hashes) to a public repo. Demo hashes are the only exception and must be labeled as such.
+- **Never publish `hashes/` with `dist/`**. Encrypt reads hashes at build time only; the output directory must not contain a `hashes/` folder or enroll JSON files.
+- If both enroll `hash` and published `mask` leak, recovery of `K` is direct — treat as critical operational failure and rotate.
+- Delete or vault `hashes/` after deploy if policy requires.
+- Rotate all passwords / re-enroll when `K` is rotated (rebuild).
+
 ## Build hygiene
 
 - Run encrypt script on a trusted machine
-- Delete or vault `hashes/` after deploy if policy requires
-- Rotate all passwords / re-enroll when `K` is rotated (rebuild)
+- `encryptPage` post-check fails if `dist/hashes` exists or obvious plaintext markers appear in text files under dist
+- Package `files` field and CI `npm pack` check exclude `hashes/`
 
 ## Loader
 

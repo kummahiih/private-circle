@@ -13,3 +13,4 @@ export {
 export { loadHashes } from './load-hashes.mjs';
 export { buildLoader, buildLoaderHtml, buildGateConfig } from './build-loader.mjs';
 export { encryptPage } from './encrypt-page.mjs';
+export { assertDistHygiene } from './assert-dist-hygiene.mjs';

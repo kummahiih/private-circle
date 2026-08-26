@@ -34,7 +34,7 @@
 ## Prioritized Mitigation Plan
 
 ### Critical
-- [ ] **Never publish `hashes/` or enroll JSON** alongside dist.
+- [x] **Never publish `hashes/` or enroll JSON** alongside dist. Documented; `encryptPage` post-check + CI `npm pack` guard.
 - [ ] **Treat weak-password circles as public-readable** under offline attack; enforce strong passwords or PRF-only.
 - [ ] **PRF enroll only on production origin** (same RP ID as gate).
 
@@ -42,12 +42,12 @@
 - [ ] Keep **password backup enrollment** if PRF is primary (recovery path).
 - [ ] **Rotate build (`K`)** and re-enroll when any hash set may have leaked.
 - [ ] Ensure deployed **HTTP CSP** matches loader meta (no `'unsafe-inline'`).
-- [ ] Remove or stop shipping **duplicate enroll sources** in package `assets/` once circle-enroll is sole source (reduce drift).
+- [x] Remove or stop shipping **duplicate enroll sources** in package `assets/` once circle-enroll is sole source (reduce drift).
 
 ### Medium
-- [ ] Rate-limit is impossible client-side; document offline threat in user-facing security notes (already partially in `assets/security.md`).
+- [x] Rate-limit is impossible client-side; document offline threat in user-facing security notes (already partially in `assets/security.md`).
 - [ ] Consider **SRI** for gate.js when operators mirror assets.
-- [ ] CI check: fail if dist contains plaintext markers from content.
+- [x] CI check: fail if dist contains plaintext markers from content / `hashes/` folder.
 
 ### Low
 - [ ] Expand tests for enroll.css copy path and CSP meta snapshots.

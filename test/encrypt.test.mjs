@@ -16,6 +16,7 @@ import {
   prfSaltForPage,
   loadHashes,
   encryptPage,
+  assertDistHygiene,
 } from '../src/encrypt.mjs';
 
 describe('normalizePageId', () => {
@@ -151,6 +152,25 @@ describe('loadHashes', () => {
   });
 });
 
+describe('assertDistHygiene', () => {
+  it('fails when hashes/ exists under outDir', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pc-hyg-'));
+    fs.mkdirSync(path.join(dir, 'hashes'));
+    assert.throws(() => assertDistHygiene(dir), /hashes\/ must not be present/);
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('fails on plaintext marker', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pc-hyg2-'));
+    fs.writeFileSync(path.join(dir, 'index.html'), 'hello MARKER-LEAK');
+    assert.throws(
+      () => assertDistHygiene(dir, { plaintextMarkers: ['MARKER-LEAK'] }),
+      /plaintext marker/
+    );
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+});
+
 describe('encryptPage (integration)', () => {
   let root, outDir, hashesDir, contentFile;
 
@@ -200,6 +220,7 @@ describe('encryptPage (integration)', () => {
     assert.ok(fs.existsSync(path.join(outDir, 'gate-config.json')));
     assert.ok(fs.existsSync(path.join(outDir, 'gate.js')));
     assert.ok(fs.existsSync(path.join(outDir, 'gate.css')));
+    assert.ok(!fs.existsSync(path.join(outDir, 'hashes')));
     const cfg = JSON.parse(fs.readFileSync(path.join(outDir, 'gate-config.json'), 'utf8'));
     assert.equal(cfg.pageId, 'test-page');
     assert.ok(cfg.share1 && cfg.iv && cfg.cipher);
@@ -229,6 +250,21 @@ describe('encryptPage (integration)', () => {
           outDir,
         }),
       /Invalid pageId/
+    );
+  });
+
+  it('refuses outDir that already has hashes/', () => {
+    const badOut = path.join(root, 'bad-out');
+    fs.mkdirSync(path.join(badOut, 'hashes'), { recursive: true });
+    assert.throws(
+      () =>
+        encryptPage({
+          pageId: 'test-page',
+          content: contentFile,
+          hashes: hashesDir,
+          outDir: badOut,
+        }),
+      /already contains hashes/
     );
   });
 });
