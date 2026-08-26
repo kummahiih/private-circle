@@ -1,9 +1,6 @@
 #!/usr/bin/env node
 /**
  * CLI for @kummahiih/private-circle
- *
- *   private-circle encrypt --page-id my-site --content content/index.html --hashes hashes --out dist
- *   private-circle init
  */
 import fs from 'fs';
 import path from 'path';
@@ -17,10 +14,6 @@ function usage() {
 Usage:
   private-circle encrypt --page-id <id> --content <file> --hashes <dir> --out <dir>
   private-circle init [--dir <path>]
-
-Examples:
-  private-circle encrypt --page-id hello-circle --content content/index.html --hashes hashes --out dist
-  private-circle init
 `);
 }
 
@@ -62,16 +55,17 @@ function cmdEncrypt(args) {
 
 function cmdInit(args) {
   const root = path.resolve(args.dir);
-  const dirs = ['content', 'hashes'];
-  for (const d of dirs) {
+  for (const d of ['content', 'hashes']) {
     fs.mkdirSync(path.join(root, d), { recursive: true });
   }
 
-  // copy enroll.html from package assets
-  const enrollSrc = path.join(__dirname, '..', 'assets', 'enroll.html');
-  if (fs.existsSync(enrollSrc)) {
-    fs.copyFileSync(enrollSrc, path.join(root, 'enroll.html'));
-    console.log('Created enroll.html');
+  const assetsDir = path.join(__dirname, '..', 'assets');
+  for (const name of ['enroll.html', 'enroll-core.js', 'enroll-prf.js']) {
+    const src = path.join(assetsDir, name);
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, path.join(root, name));
+      console.log('Created', name);
+    }
   }
 
   const contentPath = path.join(root, 'content', 'index-plaintext.html');
@@ -114,8 +108,8 @@ function cmdInit(args) {
   console.log('\nNext steps:');
   console.log('  1. Edit content/index-plaintext.html');
   console.log('  2. Collect enroll JSON files into hashes/');
-  console.log('  3. Set pageId in vercel.json / package.json scripts');
-  console.log('  4. Deploy (Vercel will run the encrypt step)');
+  console.log('  3. Set pageId in vercel.json');
+  console.log('  4. Deploy');
 }
 
 const args = parseArgs(process.argv);
