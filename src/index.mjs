@@ -10,4 +10,6 @@ export {
   xorBuf,
   b64,
   buildLoader,
+  buildLoaderHtml,
+  buildGateConfig,
 } from './encrypt.mjs';
