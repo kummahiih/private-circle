@@ -192,10 +192,17 @@ describe('encryptPage (integration)', () => {
 
     const index = fs.readFileSync(path.join(outDir, 'index.html'), 'utf8');
     assert.ok(index.includes('Kirjaudu'));
-    assert.ok(index.includes('test-page'));
+    assert.ok(!index.includes('<script>'), 'no inline script (strict CSP)');
+    assert.ok(index.includes('gate.js'));
     assert.ok(!index.includes('MARKER-XYZ'), 'plaintext must not appear in loader');
 
     assert.ok(fs.existsSync(path.join(outDir, 'robots.txt')));
+    assert.ok(fs.existsSync(path.join(outDir, 'gate-config.json')));
+    assert.ok(fs.existsSync(path.join(outDir, 'gate.js')));
+    assert.ok(fs.existsSync(path.join(outDir, 'gate.css')));
+    const cfg = JSON.parse(fs.readFileSync(path.join(outDir, 'gate-config.json'), 'utf8'));
+    assert.equal(cfg.pageId, 'test-page');
+    assert.ok(cfg.share1 && cfg.iv && cfg.cipher);
   });
 
   it('copies enroll.html when present', () => {
