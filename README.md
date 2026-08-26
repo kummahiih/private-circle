@@ -58,6 +58,19 @@ Enroll assets come from `@kummahiih/circle-enroll` (`init` / encrypt resolve the
 
 See package `enroll-json.md` for the exact JSON format.
 
+## Hashes hygiene
+
+| Rule | Why |
+|------|-----|
+| **Never commit real `hashes/`** to public git | Enroll JSON + published mask ⇒ direct recovery of build key `K` |
+| **Never ship `hashes/` inside `dist/`** | Encrypt consumes hashes at build; dist is public CDN material |
+| Vault or delete `hashes/` after deploy | Limits laptop / backup exposure |
+| Rotate `K` + re-enroll if hashes may have leaked | Invalidates old masks |
+
+Demo sites (e.g. hello-circle) may keep **labeled public demo hashes** only. Production circles must keep enroll JSON private.
+
+`encryptPage` refuses a dist that already contains a `hashes/` directory and scans text files for obvious plaintext markers when provided.
+
 ## Strict CSP
 
 **Same-origin static files only** — no inline scripts/styles, no nonces, no third-party hosts.

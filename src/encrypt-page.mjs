@@ -9,6 +9,7 @@ import { createRequire } from 'module';
 import { normalizePageId, b64, xorBuf } from './util.mjs';
 import { loadHashes } from './load-hashes.mjs';
 import { buildLoaderHtml, buildGateConfig } from './build-loader.mjs';
+import { assertDistHygiene } from './assert-dist-hygiene.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ASSETS = path.join(__dirname, '..', 'assets');
@@ -71,6 +72,14 @@ export function encryptPage(opts) {
 
   fs.mkdirSync(opts.outDir, { recursive: true });
 
+  // Refuse if operator accidentally pointed outDir at a tree that already has hashes/
+  const existingHashes = path.join(opts.outDir, 'hashes');
+  if (fs.existsSync(existingHashes)) {
+    throw new Error(
+      'outDir already contains hashes/ — refuse to write public dist over enroll secrets'
+    );
+  }
+
   fs.writeFileSync(path.join(opts.outDir, 'index.html'), buildLoaderHtml(), 'utf8');
   fs.writeFileSync(
     path.join(opts.outDir, 'gate-config.json'),
@@ -121,6 +130,15 @@ export function encryptPage(opts) {
       break;
     }
   }
+
+  const markers = opts.plaintextMarkers || [];
+  // Auto-detect a simple marker from content if caller did not pass any
+  if (!markers.length) {
+    const clearText = clear.toString('utf8');
+    const m = clearText.match(/MARKER-[A-Z0-9-]+/);
+    if (m) markers.push(m[0]);
+  }
+  assertDistHygiene(opts.outDir, { plaintextMarkers: markers });
 
   return { pageId, entries: entries.length, enrollCopied };
 }
