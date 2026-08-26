@@ -66,7 +66,7 @@ function cmdInit(args) {
     const pkg = require.resolve('@kummahiih/circle-enroll/package.json');
     assetsDir = path.join(path.dirname(pkg), 'assets');
   } catch {}
-  for (const name of ['enroll.html', 'enroll-core.js', 'enroll-prf.js']) {
+  for (const name of ['enroll.html', 'enroll.css', 'enroll-core.js', 'enroll-prf.js']) {
     const src = path.join(assetsDir, name);
     if (fs.existsSync(src)) {
       fs.copyFileSync(src, path.join(root, name));

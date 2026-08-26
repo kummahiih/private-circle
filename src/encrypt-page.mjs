@@ -32,7 +32,7 @@ function resolveEnrollAssets() {
  *   gate.css         — styles
  *   gate-config.json — per-build secrets (fetched by gate.js)
  *   robots.txt
- *   enroll.html + enroll-*.js (optional)
+ *   enroll.html + enroll.css + enroll-*.js (optional)
  */
 export function encryptPage(opts) {
   const pageId = normalizePageId(opts.pageId);
@@ -111,7 +111,7 @@ export function encryptPage(opts) {
     if (fs.existsSync(src) && fs.statSync(src).isFile()) {
       fs.copyFileSync(src, path.join(opts.outDir, 'enroll.html'));
       const dir = path.dirname(src);
-      for (const extra of ['enroll-core.js', 'enroll-prf.js']) {
+      for (const extra of ['enroll.css', 'enroll-core.js', 'enroll-prf.js']) {
         const extraSrc = path.join(dir, extra);
         if (fs.existsSync(extraSrc)) {
           fs.copyFileSync(extraSrc, path.join(opts.outDir, extra));
