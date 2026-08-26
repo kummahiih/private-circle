@@ -5,12 +5,23 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import { normalizePageId, b64, xorBuf } from './util.mjs';
 import { loadHashes } from './load-hashes.mjs';
 import { buildLoaderHtml, buildGateConfig } from './build-loader.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ASSETS = path.join(__dirname, '..', 'assets');
+const require = createRequire(import.meta.url);
+
+function resolveEnrollAssets() {
+  try {
+    const pkgJson = require.resolve('@kummahiih/circle-enroll/package.json');
+    return path.join(path.dirname(pkgJson), 'assets');
+  } catch {
+    return PACKAGE_ASSETS;
+  }
+}
 
 /**
  * Encrypt a clear HTML page and write the gated loader to outDir.
@@ -87,10 +98,12 @@ export function encryptPage(opts) {
     }
   }
 
+  const enrollDir = resolveEnrollAssets();
   const enrollCandidates = [
     ...(opts.enrollSearchPaths || []),
     path.join(process.cwd(), 'enroll.html'),
     path.join(process.cwd(), 'assets', 'enroll.html'),
+    path.join(enrollDir, 'enroll.html'),
     path.join(PACKAGE_ASSETS, 'enroll.html'),
   ];
   let enrollCopied = false;

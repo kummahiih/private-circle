@@ -5,6 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import { encryptPage, normalizePageId } from '../src/encrypt.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -59,7 +60,12 @@ function cmdInit(args) {
     fs.mkdirSync(path.join(root, d), { recursive: true });
   }
 
-  const assetsDir = path.join(__dirname, '..', 'assets');
+  const require = createRequire(import.meta.url);
+  let assetsDir = path.join(__dirname, '..', 'assets');
+  try {
+    const pkg = require.resolve('@kummahiih/circle-enroll/package.json');
+    assetsDir = path.join(path.dirname(pkg), 'assets');
+  } catch {}
   for (const name of ['enroll.html', 'enroll-core.js', 'enroll-prf.js']) {
     const src = path.join(assetsDir, name);
     if (fs.existsSync(src)) {

@@ -1,6 +1,6 @@
 {
   "name": "@kummahiih/private-circle",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Client-side gated static pages with page-scoped PBKDF2 or WebAuthn PRF unlock. No passwords in git.",
   "type": "module",
   "bin": {
@@ -18,6 +18,9 @@
   "scripts": {
     "test": "node --test test/*.mjs",
     "encrypt": "node bin/cli.mjs encrypt"
+  },
+  "dependencies": {
+    "@kummahiih/circle-enroll": "github:kummahiih/circle-enroll#main"
   },
   "engines": {
     "node": ">=18"
