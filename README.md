@@ -58,6 +58,8 @@ Enroll assets come from `@kummahiih/circle-enroll` (`init` / encrypt resolve the
 
 See package `enroll-json.md` for the exact JSON format.
 
+**Browser / authenticator matrix for PRF:** [docs/WEBAUTHN_PRF_SUPPORT.md](docs/WEBAUTHN_PRF_SUPPORT.md) (Chrome/Edge 116+, Safari 18+, Firefox 135+; platform authenticators vary).
+
 ## Operator runbook (production)
 
 1. **Same-origin enroll for PRF** — Serve `enroll.html` on the **same origin** as the gated page. WebAuthn RP ID binds the passkey; cross-origin public enroll works for PBKDF2 only.
