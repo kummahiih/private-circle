@@ -5,15 +5,16 @@ Ship a **static** site that stays unreadable until the visitor enters a matching
 - Passwords / passkeys never need to live in git
 - Hashes are **page-scoped** via `pageId`
 - Build-time AES-256-GCM + XOR masks
-- Same-origin enrollment page for PRF support
-- **Strict CSP** friendly (no inline scripts)
+- Same-origin enrollment (from `@kummahiih/circle-enroll`) for PRF support
+- **Strict CSP**: same-origin static assets only (`script-src` / `style-src` `'self'`)
 
 ## Install
 
 ```bash
 npm i -D @kummahiih/private-circle
-# or just use npx
 ```
+
+Depends on `@kummahiih/circle-enroll` for enroll UI assets.
 
 ## Quick start
 
@@ -50,44 +51,48 @@ encryptPage({
 
 ## Enrollment
 
-Use the included `enroll.html` (copied by `init` or by the encrypt step when present).
+Enroll assets come from `@kummahiih/circle-enroll` (`init` / encrypt resolve the package path):
 
 - **Password** → `alg: "PBKDF2-SHA256"`
-- **Passkey (WebAuthn PRF)** → `alg: "WebAuthn-PRF"`  
-  Must be enrolled on the **same origin** as the gated page.
+- **Passkey (WebAuthn PRF)** → `alg: "WebAuthn-PRF"` (same origin as the gated page)
 
-See `assets/enroll-json.md` for the exact JSON format.
+See package `enroll-json.md` for the exact JSON format.
 
 ## Strict CSP
 
-The gated page ships **without inline scripts or styles**:
+**Same-origin static files only** — no inline scripts/styles, no nonces, no third-party hosts.
 
-| File | Role |
-|------|------|
-| `index.html` | Shell only |
-| `gate.js` | Unlock logic (`script-src 'self'`) |
-| `gate.css` | Styles (`style-src 'self'`) |
-| `gate-config.json` | Per-build secrets (`connect-src 'self'`) |
+| File | Role | CSP |
+|------|------|-----|
+| `index.html` | Shell only | no executable code |
+| `gate.js` | Unlock logic | `script-src 'self'` |
+| `gate.css` | Styles | `style-src 'self'` |
+| `gate-config.json` | Per-build secrets | `connect-src 'self'` |
+| `enroll.html` + `enroll.css` + `enroll-*.js` | Enrollment | same pattern; enroll meta uses `connect-src 'none'` |
 
-Default meta CSP on the loader:
+Default meta CSP on the gate loader:
 
 ```
-default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; ...
+default-src 'none'; base-uri 'none'; form-action 'none';
+script-src 'self'; style-src 'self'; connect-src 'self';
+img-src 'none'; font-src 'none'; object-src 'none'; frame-ancestors 'none'
 ```
 
-Enroll page uses the same pattern (`enroll.html` + `enroll-core.js` + `enroll-prf.js`).
+Recommended HTTP header (e.g. Vercel) should match. Do not add `'unsafe-inline'`.
 
 ## Tests
 
 ```bash
 npm test
-# or
-node --test test/*.mjs
 ```
 
 ## Security notes
 
-- Client-side gate only. Weak passwords can be guessed offline against the downloaded ciphertext + masks.
-- WebAuthn PRF greatly reduces the offline attack surface (authenticator required).
-- Keep `hashes/` private. Never publish both hash and mask.
+- Client-side gate only. Weak passwords can be guessed offline against downloaded ciphertext + masks.
+- WebAuthn PRF reduces the offline attack surface (authenticator required).
+- Keep `hashes/` private. Never publish both enroll `hash` and published `mask`.
 - Passkey loss = permanent lockout unless you keep a password backup enrollment.
+
+## License
+
+Apache-2.0
