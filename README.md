@@ -6,6 +6,7 @@ Ship a **static** site that stays unreadable until the visitor enters a matching
 - Hashes are **page-scoped** via `pageId`
 - Build-time AES-256-GCM + XOR masks
 - Same-origin enrollment page for PRF support
+- **Strict CSP** friendly (no inline scripts)
 
 ## Install
 
@@ -57,12 +58,31 @@ Use the included `enroll.html` (copied by `init` or by the encrypt step when pre
 
 See `assets/enroll-json.md` for the exact JSON format.
 
+## Strict CSP
+
+The gated page ships **without inline scripts or styles**:
+
+| File | Role |
+|------|------|
+| `index.html` | Shell only |
+| `gate.js` | Unlock logic (`script-src 'self'`) |
+| `gate.css` | Styles (`style-src 'self'`) |
+| `gate-config.json` | Per-build secrets (`connect-src 'self'`) |
+
+Default meta CSP on the loader:
+
+```
+default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; ...
+```
+
+Enroll page uses the same pattern (`enroll.html` + `enroll-core.js` + `enroll-prf.js`).
+
 ## Tests
 
 ```bash
 npm test
 # or
-node --test test/
+node --test test/*.mjs
 ```
 
 ## Security notes
