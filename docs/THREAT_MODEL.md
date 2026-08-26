@@ -41,12 +41,12 @@
 ### High
 - [x] Keep **password backup enrollment** if PRF is primary (recovery path). Documented in README operator runbook + security.md.
 - [x] **Rotate build (`K`)** and re-enroll when any hash set may have leaked. Documented in README operator runbook.
-- [ ] Ensure deployed **HTTP CSP** matches loader meta (no `'unsafe-inline'`).
+- [x] Ensure deployed **HTTP CSP** matches loader meta (no `'unsafe-inline'`).
 - [x] Remove or stop shipping **duplicate enroll sources** in package `assets/` once circle-enroll is sole source (reduce drift).
 
 ### Medium
 - [x] Rate-limit is impossible client-side; document offline threat in user-facing security notes (already in `assets/security.md`).
-- [ ] Consider **SRI** for gate.js when operators mirror assets.
+- [x] Optional **SRI** for gate.js — **deferred**. Same-origin + strict CSP cover the primary threat; revisit if operators commonly mirror assets to third-party hosts.
 - [x] CI check: fail if dist contains plaintext markers from content / `hashes/` folder.
 
 ### Low
