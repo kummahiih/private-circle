@@ -1,5 +1,5 @@
 /**
- * Encrypt page and write dist/
+ * Encrypt page and write dist/ (strict-CSP friendly: no inline scripts).
  */
 import fs from 'fs';
 import path from 'path';
@@ -7,12 +7,21 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { normalizePageId, b64, xorBuf } from './util.mjs';
 import { loadHashes } from './load-hashes.mjs';
-import { buildLoader } from './build-loader.mjs';
+import { buildLoaderHtml, buildGateConfig } from './build-loader.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PACKAGE_ASSETS = path.join(__dirname, '..', 'assets');
 
 /**
- * Encrypt a clear HTML page and write the gated loader (+ optional enroll.html) to outDir.
+ * Encrypt a clear HTML page and write the gated loader to outDir.
+ *
+ * Outputs (CSP-safe):
+ *   index.html       — shell only (script-src 'self')
+ *   gate.js          — unlock logic
+ *   gate.css         — styles
+ *   gate-config.json — per-build secrets (fetched by gate.js)
+ *   robots.txt
+ *   enroll.html + enroll-*.js (optional)
  */
 export function encryptPage(opts) {
   const pageId = normalizePageId(opts.pageId);
@@ -41,7 +50,7 @@ export function encryptPage(opts) {
     const entry = {
       alg: e.alg,
       mask: b64(mask),
-      label: e.label
+      label: e.label,
     };
     if (e.alg === 'PBKDF2-SHA256') {
       entry.salt = b64(e.salt);
@@ -50,26 +59,39 @@ export function encryptPage(opts) {
   });
 
   fs.mkdirSync(opts.outDir, { recursive: true });
-  const loader = buildLoader({
-    pageId,
-    share1B64: b64(share1),
-    ivB64: b64(iv),
-    cipherB64: b64(cipherFull),
-    entries
-  });
-  fs.writeFileSync(path.join(opts.outDir, 'index.html'), loader, 'utf8');
+
+  fs.writeFileSync(path.join(opts.outDir, 'index.html'), buildLoaderHtml(), 'utf8');
+  fs.writeFileSync(
+    path.join(opts.outDir, 'gate-config.json'),
+    JSON.stringify(
+      buildGateConfig({
+        pageId,
+        share1B64: b64(share1),
+        ivB64: b64(iv),
+        cipherB64: b64(cipherFull),
+        entries,
+      })
+    ),
+    'utf8'
+  );
   fs.writeFileSync(
     path.join(opts.outDir, 'robots.txt'),
     'User-agent: *\nDisallow: /\n',
     'utf8'
   );
 
-  // Copy public enrollment page (+ JS pieces) if present
+  for (const name of ['gate.js', 'gate.css']) {
+    const src = path.join(PACKAGE_ASSETS, name);
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, path.join(opts.outDir, name));
+    }
+  }
+
   const enrollCandidates = [
     ...(opts.enrollSearchPaths || []),
     path.join(process.cwd(), 'enroll.html'),
     path.join(process.cwd(), 'assets', 'enroll.html'),
-    path.join(__dirname, '..', 'assets', 'enroll.html'),
+    path.join(PACKAGE_ASSETS, 'enroll.html'),
   ];
   let enrollCopied = false;
   for (const src of enrollCandidates) {
