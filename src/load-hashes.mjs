@@ -5,6 +5,8 @@ import fs from 'fs';
 import path from 'path';
 import { normalizePageId, b64 } from './util.mjs';
 
+const MIN_PBKDF2_ITERATIONS = 310000;
+
 /**
  * Load and validate enrollment JSON files for a given pageId.
  * Supports alg: "PBKDF2-SHA256" and "WebAuthn-PRF".
@@ -34,8 +36,10 @@ export function loadHashes(dir, pageId) {
       console.warn('skip (pageId mismatch):', f, 'has', filePage, 'expected', pageId);
       continue;
     }
-    if (alg === 'PBKDF2-SHA256' && (raw.iterations || 0) < 310000) {
-      console.warn('warning: iterations < 310000 in', f);
+    if (alg === 'PBKDF2-SHA256' && (raw.iterations || 0) < MIN_PBKDF2_ITERATIONS) {
+      throw new Error(
+        `PBKDF2 iterations too weak in ${f}: ${raw.iterations || 0} < ${MIN_PBKDF2_ITERATIONS}`
+      );
     }
     const hashBuf = Buffer.from(raw.hash, 'base64');
     if (hashBuf.length !== 32) {

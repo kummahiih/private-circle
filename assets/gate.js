@@ -44,6 +44,15 @@
     return new TextEncoder().encode("circle-prf:v1:" + pageId);
   }
 
+  /** Wrong K and a failed GCM auth tag both surface as OperationError in WebCrypto. */
+  function noteProbeFailure(err) {
+    var name = err && err.name;
+    if (!name || name === "OperationError") return;
+    if (typeof console !== "undefined" && console.warn) {
+      console.warn("gate: unexpected AES-GCM probe error", name);
+    }
+  }
+
   async function deriveHash(password, saltU8, pageId) {
     var pbkdf2Salt = buildPbkdf2Salt(saltU8, pageId);
     var key = await crypto.subtle.importKey(
@@ -85,6 +94,7 @@
         await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, cipher);
         return key;
       } catch (err) {
+        noteProbeFailure(err);
         /* try next entry */
       }
     }
@@ -108,6 +118,7 @@
     try {
       return await decryptWithKey(key, cfg.iv, cfg.cipher);
     } catch (e) {
+      noteProbeFailure(e);
       return null;
     }
   }

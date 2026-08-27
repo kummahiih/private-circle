@@ -17,6 +17,7 @@ const PACKAGE_ASSETS = path.join(__dirname, '..', 'assets');
 const require = createRequire(import.meta.url);
 
 const TEXT_EXTS = new Set(['.html', '.js', '.css']);
+const IV_RETRY_LIMIT = 8;
 
 function resolveEnrollAssets() {
   try {
@@ -54,11 +55,34 @@ function listContentAssets(root) {
 }
 
 /**
- * AES-256-GCM encrypt buffer with given K and fresh IV.
+ * Fresh 12-byte IV that has not been used with this content key.
+ * AES-GCM + repeated IV + same K is catastrophic.
+ * @param {Set<string>} usedIvs base64 IVs already bound to K
+ * @param {string} [label]
+ * @returns {Buffer}
+ */
+function uniqueIv(usedIvs, label) {
+  for (let attempt = 0; attempt < IV_RETRY_LIMIT; attempt++) {
+    const iv = crypto.randomBytes(12);
+    const ivB64 = b64(iv);
+    if (usedIvs.has(ivB64)) continue;
+    usedIvs.add(ivB64);
+    return iv;
+  }
+  const where = label ? ` for file: ${label}` : '';
+  throw new Error(`AES-GCM IV collision detected${where} (same K must never reuse an IV)`);
+}
+
+/**
+ * AES-256-GCM encrypt buffer with given K and a unique IV.
+ * @param {Buffer} K
+ * @param {Buffer} plain
+ * @param {Set<string>} usedIvs
+ * @param {string} [label]
  * @returns {{ iv: Buffer, cipherFull: Buffer }}
  */
-function encryptBuf(K, plain) {
-  const iv = crypto.randomBytes(12);
+function encryptBuf(K, plain, usedIvs, label) {
+  const iv = uniqueIv(usedIvs, label);
   const cipher = crypto.createCipheriv('aes-256-gcm', K, iv);
   const encBody = Buffer.concat([cipher.update(plain), cipher.final()]);
   const tag = cipher.getAuthTag();
@@ -99,6 +123,8 @@ export function encryptPage(opts) {
   const K = crypto.randomBytes(32);
   const share1 = crypto.randomBytes(32);
   const share2 = xorBuf(K, share1);
+  /** @type {Set<string>} */
+  const usedIvs = new Set();
 
   /** @type {Record<string, { iv: string, cipher: string }> } */
   const files = {};
@@ -113,7 +139,7 @@ export function encryptPage(opts) {
     }
     for (const rel of assets) {
       const plain = fs.readFileSync(path.join(contentPath, rel));
-      const { iv, cipherFull } = encryptBuf(K, plain);
+      const { iv, cipherFull } = encryptBuf(K, plain, usedIvs, rel);
       files[rel] = { iv: b64(iv), cipher: b64(cipherFull) };
       if (!markers.length) {
         const m = plain.toString('utf8').match(/MARKER-[A-Z0-9-]+/);
@@ -129,7 +155,7 @@ export function encryptPage(opts) {
     primaryCipherB64 = files[primaryKey].cipher;
   } else {
     const clear = fs.readFileSync(contentPath);
-    const { iv, cipherFull } = encryptBuf(K, clear);
+    const { iv, cipherFull } = encryptBuf(K, clear, usedIvs, path.basename(contentPath));
     primaryIvB64 = b64(iv);
     primaryCipherB64 = b64(cipherFull);
     const base = path.basename(contentPath);
