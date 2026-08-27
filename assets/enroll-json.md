@@ -18,6 +18,8 @@ Produced by `enroll.html`. Sent privately to the site operator. **Not** deployed
 }
 ```
 
+`iterations` must be **at least 310000**. Encrypt rejects weaker enroll files.
+
 ### pageId binding (PBKDF2)
 
 ```text
@@ -68,5 +70,6 @@ pre-fills the pageId field.
 
 - **PRF:** enroll and gate must share the same origin (RP ID). Prefer PRF for high-value circles; keep a password backup if recovery is required.
 - **Hashes:** never commit real enroll JSON to public git; never ship with `dist/`. Rotate build key `K` and re-enroll if hashes may have leaked with masks.
+- **Headers:** host must serve correct `Content-Type` and CSP (see README operator runbook).
 
 See package README operator runbook and `docs/THREAT_MODEL.md`.

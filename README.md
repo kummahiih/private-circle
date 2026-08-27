@@ -58,6 +58,8 @@ Enroll assets come from `@kummahiih/circle-enroll` (`init` / encrypt resolve the
 
 See package `enroll-json.md` for the exact JSON format.
 
+PBKDF2 enroll JSON **must** use `iterations >= 310000`. Encrypt refuses weaker parameters.
+
 **Browser / authenticator matrix for PRF:** [docs/WEBAUTHN_PRF_SUPPORT.md](docs/WEBAUTHN_PRF_SUPPORT.md) (Chrome/Edge 116+, Safari 18+, Firefox 135+; platform authenticators vary).
 
 ## Operator runbook (production)
@@ -66,6 +68,18 @@ See package `enroll-json.md` for the exact JSON format.
 2. **Prefer WebAuthn-PRF** for high-value circles. Keep a **password backup** enrollment if recovery after authenticator loss is required (passkey-only = permanent lockout on loss).
 3. **Hashes hygiene** — Never commit real `hashes/` to public git; never ship `hashes/` inside `dist/`. Vault or delete after deploy. Demo sites may keep labeled public demo hashes only.
 4. **Rotate on leak** — If any hash set may have leaked with published masks, rotate build key `K`, re-encrypt, and re-enroll everyone.
+5. **HTTP headers (critical)** — The host must set correct `Content-Type` and CSP. A wrong type (e.g. `gate.js` as `text/plain`) can defeat CSP assumptions.
+
+```
+gate.js            Content-Type: application/javascript
+gate.css           Content-Type: text/css
+gate-config.json   Content-Type: application/json
+index.html         Content-Type: text/html; charset=utf-8
+enroll.html        Content-Type: text/html; charset=utf-8
+enroll.css         Content-Type: text/css
+enroll-*.js        Content-Type: application/javascript
+all responses      Content-Security-Policy: default-src 'none'; … (match loader meta; no 'unsafe-inline')
+```
 
 See also [`assets/security.md`](assets/security.md), [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md), and [`@kummahiih/circle-enroll` README](https://github.com/kummahiih/circle-enroll#operator-runbook-production).
 

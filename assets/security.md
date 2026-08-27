@@ -20,6 +20,12 @@
 2. **Prefer WebAuthn-PRF** for high-value circles; keep a password backup enrollment if recovery is required.
 3. **Never commit real `hashes/`** to public git; **never publish `hashes/` with `dist/`**.
 4. **Rotate `K` + re-enroll** when any hash set may have leaked with published masks.
+5. **HTTP headers (critical)** — Host must set types and CSP on every asset:
+   - `gate.js` / `enroll-*.js` → `Content-Type: application/javascript`
+   - `gate.css` / `enroll.css` → `Content-Type: text/css`
+   - `gate-config.json` → `Content-Type: application/json`
+   - `index.html` / `enroll.html` → `Content-Type: text/html; charset=utf-8`
+   - all responses → `Content-Security-Policy` matching the loader meta (no `'unsafe-inline'`)
 
 ## Hashes hygiene (critical)
 
@@ -28,12 +34,14 @@
 - If both enroll `hash` and published `mask` leak, recovery of `K` is direct — treat as critical operational failure and rotate.
 - Delete or vault `hashes/` after deploy if policy requires.
 - Rotate all passwords / re-enroll when `K` is rotated (rebuild).
+- PBKDF2 enroll files with `iterations < 310000` are rejected at encrypt time.
 
 ## Build hygiene
 
 - Run encrypt script on a trusted machine
 - `encryptPage` post-check fails if `dist/hashes` exists or obvious plaintext markers appear in text files under dist
 - Package `files` field and CI `npm pack` check exclude `hashes/`
+- Multifile builds use one `K` and a unique 12-byte IV per file; encrypt fails closed if an IV would be reused
 
 ## Loader
 

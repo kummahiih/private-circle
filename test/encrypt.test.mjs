@@ -151,6 +151,39 @@ describe('loadHashes', () => {
     assert.throws(() => loadHashes(badDir, 'x'), /missing v or hash/);
     fs.rmSync(badDir, { recursive: true, force: true });
   });
+
+  it('rejects PBKDF2 iterations below 310000', () => {
+    const badDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pc-weak-'));
+    fs.writeFileSync(
+      path.join(badDir, 'weak.json'),
+      JSON.stringify({
+        v: 1,
+        pageId: 'x',
+        alg: 'PBKDF2-SHA256',
+        iterations: 100000,
+        salt: b64(crypto.randomBytes(16)),
+        hash: b64(crypto.randomBytes(32)),
+      })
+    );
+    assert.throws(() => loadHashes(badDir, 'x'), /iterations too weak/);
+    fs.rmSync(badDir, { recursive: true, force: true });
+  });
+
+  it('rejects missing PBKDF2 iterations', () => {
+    const badDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pc-noiter-'));
+    fs.writeFileSync(
+      path.join(badDir, 'noiter.json'),
+      JSON.stringify({
+        v: 1,
+        pageId: 'x',
+        alg: 'PBKDF2-SHA256',
+        salt: b64(crypto.randomBytes(16)),
+        hash: b64(crypto.randomBytes(32)),
+      })
+    );
+    assert.throws(() => loadHashes(badDir, 'x'), /iterations too weak/);
+    fs.rmSync(badDir, { recursive: true, force: true });
+  });
 });
 
 describe('assertDistHygiene', () => {
@@ -357,6 +390,10 @@ describe('encryptPage (integration)', () => {
     assert.ok(cfg.files['app.css']);
     assert.ok(cfg.files['index.html'].iv && cfg.files['index.html'].cipher);
     assert.equal(cfg.cipher, cfg.files['index.html'].cipher, 'primary cipher is index.html');
+
+    const ivs = Object.values(cfg.files).map((f) => f.iv);
+    assert.equal(new Set(ivs).size, ivs.length, 'each file under K must have a unique IV');
+    assert.ok(cfg.files['index.html'].iv === cfg.iv, 'primary iv matches index.html');
 
     const index = fs.readFileSync(path.join(outMulti, 'index.html'), 'utf8');
     assert.ok(!index.includes('MARKER-DIR'));
