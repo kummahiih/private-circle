@@ -1,5 +1,7 @@
 # @kummahiih/private-circle
 
+[![npm version](https://img.shields.io/npm/v/@kummahiih/private-circle.svg)](https://www.npmjs.com/package/@kummahiih/private-circle)
+
 Ship a **static** site that stays unreadable until the visitor enters a matching password **or** unlocks with a WebAuthn passkey (PRF).
 
 - Passwords / passkeys never need to live in git
@@ -10,7 +12,7 @@ Ship a **static** site that stays unreadable until the visitor enters a matching
 
 ## AI Disclosure
 
-This package has been developed with assistance from artificial intelligence tools. Users and developers should be aware that portions of the code, documentation, and implementation may have been generated or refined using AI-assisted development practices.
+This package has been developed with assistance from artificial intelligence tools. Users and developers should be aware that portions of the code, documentation, and implementation may have been generated or refined using AI-assisted development practices. See [docs/AI_DISCLOSURE.md](docs/AI_DISCLOSURE.md) for details.
 
 ## Install
 
@@ -18,7 +20,9 @@ This package has been developed with assistance from artificial intelligence too
 npm i -D @kummahiih/private-circle
 ```
 
-Depends on `@kummahiih/circle-enroll` for enroll UI assets.
+Dependes on `@kummahiih/circle-enroll` for enroll UI assets.
+
+**npm**: https://www.npmjs.com/package/@kummahiih/private-circle
 
 ## Quick start
 

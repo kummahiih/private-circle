@@ -1,6 +1,6 @@
 {
   "name": "@kummahiih/private-circle",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Client-side gated static pages with page-scoped PBKDF2 or WebAuthn PRF unlock. No passwords in git.",
   "type": "module",
   "bin": {
