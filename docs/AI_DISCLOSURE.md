@@ -1,7 +1,5 @@
 # AI Disclosure Statement
 
-**Compliance**: EU AI Act Article 50(2)
-
 ## Overview
 
 This package has been developed with assistance from artificial intelligence tools. This document provides transparency regarding the role of AI in the development process.
@@ -81,5 +79,4 @@ If you have questions about AI disclosure or the development process, please ope
 
 ---
 
-**Last Updated**: 2026-08-28  
-**AI Disclosure Required By**: EU AI Act Article 50(2)
+**Last Updated**: 2026-08-28
