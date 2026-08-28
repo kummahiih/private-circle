@@ -8,6 +8,10 @@ Ship a **static** site that stays unreadable until the visitor enters a matching
 - Same-origin enrollment (from `@kummahiih/circle-enroll`) for PRF support
 - **Strict CSP**: same-origin static assets only (`script-src` / `style-src` `'self'`)
 
+## AI Disclosure
+
+This package has been developed with assistance from artificial intelligence tools. Users and developers should be aware that portions of the code, documentation, and implementation may have been generated or refined using AI-assisted development practices.
+
 ## Install
 
 ```bash
@@ -81,7 +85,7 @@ enroll-*.js        Content-Type: application/javascript
 all responses      Content-Security-Policy: default-src 'none'; … (match loader meta; no 'unsafe-inline')
 ```
 
-See also [`assets/security.md`](assets/security.md), [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md), and [`@kummahiih/circle-enroll` README](https://github.com/kummahiih/circle-enroll#operator-runbook-production).
+See also [`assets/security.md`](assets/security.md), [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md), and [`@kummahiih/circle-enroll` README](https://github.com/kummahiih/circle-enroll).
 
 ## Hashes hygiene
 
