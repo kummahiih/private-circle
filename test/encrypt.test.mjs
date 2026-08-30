@@ -282,11 +282,13 @@ describe('encryptPage (integration)', () => {
       enrollSearchPaths: [enrollSrc],
     });
     assert.equal(result.enrollCopied, true);
-    assert.ok(fs.existsSync(path.join(outDir, 'enroll.html')));
+    assert.equal(result.lockPageId, true);
+    const stamped = fs.readFileSync(path.join(outDir, 'enroll.html'), 'utf8');
+    assert.match(stamped, /data-page-id="test-page"/);
+    assert.match(stamped, /data-lock-page-id="1"/);
   });
 
   it('copies enroll.css (+ siblings) from package assets and matches CSP meta', () => {
-    // Point enrollSearchPaths at real circle-enroll assets
     const require = createRequire(import.meta.url);
     let enrollHtml;
     try {
@@ -316,7 +318,6 @@ describe('encryptPage (integration)', () => {
     assert.ok(fs.existsSync(coreOut));
     assert.ok(fs.existsSync(prfOut));
 
-    // Content fingerprint: copied bytes match source
     const srcDir = path.dirname(enrollHtml);
     assert.deepEqual(
       fs.readFileSync(cssOut),
@@ -331,6 +332,27 @@ describe('encryptPage (integration)', () => {
     assert.equal(enrollCsp[1], ENROLL_CSP);
     assert.ok(enrollHtmlText.includes('href="enroll.css"'));
     assert.ok(!enrollHtmlText.includes('<script>'), 'enroll has no inline scripts');
+    assert.match(enrollHtmlText, /<html[^>]*data-page-id="test-page"/);
+    assert.match(enrollHtmlText, /data-lock-page-id="1"/);
+  });
+
+  it('skips enroll pageId stamp when lockPageId is false', () => {
+    const enrollSrc = path.join(root, 'enroll-unlocked.html');
+    fs.writeFileSync(enrollSrc, '<html lang="fi"><body>enroll</body></html>');
+    const outUnlock = path.join(root, 'dist-unlock');
+    const result = encryptPage({
+      pageId: 'test-page',
+      content: contentFile,
+      hashes: hashesDir,
+      outDir: outUnlock,
+      enrollSearchPaths: [enrollSrc],
+      lockPageId: false,
+    });
+    assert.equal(result.enrollCopied, true);
+    assert.equal(result.lockPageId, false);
+    const html = fs.readFileSync(path.join(outUnlock, 'enroll.html'), 'utf8');
+    assert.equal(html, '<html lang="fi"><body>enroll</body></html>');
+    assert.doesNotMatch(html, /data-lock-page-id/);
   });
 
   it('rejects invalid pageId', () => {
@@ -432,7 +454,6 @@ describe('encryptPage (integration)', () => {
     fs.writeFileSync(path.join(contentDir, 'app.js'), 'var secret = "MARKER-LEAK-JS";');
 
     const outLeak = path.join(root, 'dist-leak');
-    // encrypt itself must not put plaintext in dist; assertDistHygiene is called inside
     const result = encryptPage({
       pageId: 'test-page',
       content: contentDir,
@@ -441,11 +462,9 @@ describe('encryptPage (integration)', () => {
       plaintextMarkers: ['MARKER-LEAK-JS'],
     });
     assert.ok(result.files >= 1);
-    // manual hygiene should still pass because no plaintext in out
     assert.doesNotThrow(() =>
       assertDistHygiene(outLeak, { plaintextMarkers: ['MARKER-LEAK-JS'] })
     );
-    // if we force a leak, hygiene fails
     fs.writeFileSync(path.join(outLeak, 'leaked.js'), 'MARKER-LEAK-JS');
     assert.throws(
       () => assertDistHygiene(outLeak, { plaintextMarkers: ['MARKER-LEAK-JS'] }),
