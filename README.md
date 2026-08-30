@@ -40,9 +40,14 @@ npx @kummahiih/private-circle encrypt \
 ## CLI
 
 ```
-private-circle encrypt --page-id <id> --content <file> --hashes <dir> --out <dir>
+private-circle encrypt --page-id <id> --content <file|dir> --hashes <dir> --out <dir>
+private-circle encrypt ... --no-lock-page-id
 private-circle init [--dir <path>]
 ```
+
+Encrypt copies enroll into `dist/` and **locks pageId** to `--page-id` (`data-page-id` + `data-lock-page-id="1"` on `<html>`). The public circle-enroll site stays editable. Pass `--no-lock-page-id` to leave the enroll field editable.
+
+Programmatic: `encryptPage({ ..., lockPageId: false })`.
 
 ## Programmatic API
 
