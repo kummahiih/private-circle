@@ -103,6 +103,17 @@ function encryptBuf(K, plain, usedIvs, label) {
  *   robots.txt
  *   enroll.html + enroll.css + enroll-*.js (optional)
  */
+
+function stampEnrollHtml(html, pageId, lock) {
+  if (!lock) return html;
+  return html.replace(/<html\b([^>]*)>/i, (m, attrs) => {
+    let a = attrs;
+    a = a.replace(/\sdata-page-id="[^"]*"/gi, '');
+    a = a.replace(/\sdata-lock-page-id="[^"]*"/gi, '');
+    return `<html${a} data-page-id="${pageId}" data-lock-page-id="1">`;
+  });
+}
+
 export function encryptPage(opts) {
   const pageId = normalizePageId(opts.pageId);
   if (!pageId || pageId.length < 2) {
@@ -118,6 +129,7 @@ export function encryptPage(opts) {
   }
 
   const isDir = fs.statSync(contentPath).isDirectory();
+  const lockPageId = opts.lockPageId !== false;
   const enrolls = loadHashes(opts.hashes, pageId);
 
   const K = crypto.randomBytes(32);
@@ -146,7 +158,6 @@ export function encryptPage(opts) {
         if (m) markers.push(m[0]);
       }
     }
-    // Prefer index.html as primary for single-field compat if present
     const primaryKey =
       files['index.html'] ? 'index.html' :
       files['index-plaintext.html'] ? 'index-plaintext.html' :
@@ -181,7 +192,6 @@ export function encryptPage(opts) {
 
   fs.mkdirSync(opts.outDir, { recursive: true });
 
-  // Refuse if operator accidentally pointed outDir at a tree that already has hashes/
   const existingHashes = path.join(opts.outDir, 'hashes');
   if (fs.existsSync(existingHashes)) {
     throw new Error(
@@ -189,7 +199,6 @@ export function encryptPage(opts) {
     );
   }
 
-  // Never copy plaintext content into dist
   if (isDir) {
     const leak = path.join(opts.outDir, 'content');
     if (fs.existsSync(leak)) {
@@ -236,7 +245,12 @@ export function encryptPage(opts) {
   let enrollCopied = false;
   for (const src of enrollCandidates) {
     if (fs.existsSync(src) && fs.statSync(src).isFile()) {
-      fs.copyFileSync(src, path.join(opts.outDir, 'enroll.html'));
+      const destEnroll = path.join(opts.outDir, 'enroll.html');
+      fs.copyFileSync(src, destEnroll);
+      if (lockPageId) {
+        const stamped = stampEnrollHtml(fs.readFileSync(destEnroll, 'utf8'), pageId, true);
+        fs.writeFileSync(destEnroll, stamped, 'utf8');
+      }
       const dir = path.dirname(src);
       for (const extra of ['enroll.css', 'enroll-core.js', 'enroll-prf.js']) {
         const extraSrc = path.join(dir, extra);
@@ -255,6 +269,7 @@ export function encryptPage(opts) {
     pageId,
     entries: entries.length,
     enrollCopied,
+    lockPageId,
     files: Object.keys(files).length,
     multifile: isDir,
   };

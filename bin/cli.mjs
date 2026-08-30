@@ -17,6 +17,7 @@ Usage:
   private-circle init [--dir <path>]
 
   --content  single HTML file (v1) or directory of .html/.js/.css (multifile, same K)
+  --no-lock-page-id  leave enroll.html pageId field editable (default: lock to --page-id)
 `);
 }
 
@@ -28,6 +29,7 @@ function parseArgs(argv) {
     outDir: 'dist',
     pageId: '',
     dir: '.',
+    lockPageId: true,
   };
   for (let i = 3; i < argv.length; i++) {
     if (argv[i] === '--content') out.content = argv[++i];
@@ -35,6 +37,7 @@ function parseArgs(argv) {
     else if (argv[i] === '--out') out.outDir = argv[++i];
     else if (argv[i] === '--page-id') out.pageId = argv[++i];
     else if (argv[i] === '--dir') out.dir = argv[++i];
+    else if (argv[i] === '--no-lock-page-id') out.lockPageId = false;
   }
   return out;
 }
@@ -45,6 +48,7 @@ function cmdEncrypt(args) {
     content: args.content,
     hashes: args.hashes,
     outDir: args.outDir,
+    lockPageId: args.lockPageId,
   });
   console.log('pageId:', result.pageId);
   console.log('Wrote', path.join(args.outDir, 'index.html'));
@@ -53,7 +57,8 @@ function cmdEncrypt(args) {
     console.log('Multifile assets:', result.files);
   }
   if (result.enrollCopied) {
-    console.log('Copied public enroll page →', path.join(args.outDir, 'enroll.html'));
+    console.log('Copied enroll page →', path.join(args.outDir, 'enroll.html'),
+      result.lockPageId ? '(pageId locked)' : '(pageId editable)');
   } else {
     console.log('Note: no enroll.html found (optional)');
   }
