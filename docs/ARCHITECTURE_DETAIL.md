@@ -26,11 +26,15 @@
 Gate loader meta (and recommended HTTP header):
 
 ```
-default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self';
+default-src 'none'; script-src 'self' blob:; style-src 'self' blob:; connect-src 'self';
 base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
 ```
 
-Same-origin static assets only. No `'unsafe-inline'`, no nonces.
+`blob:` is only for multifile unlock (decrypted JS/CSS rewritten to blob URLs). Do **not** add `'unsafe-inline'` or nonces.
+
+Enroll (from `@kummahiih/circle-enroll`) uses a tighter policy: `script-src 'self'; style-src 'self'; connect-src 'none'` — styles live in `enroll.css`.
+
+Encrypt copies `./enroll.html` from the consumer working directory **before** the circle-enroll package. A forked inline-`<style>` enroll.html will ship `'unsafe-inline'` even when the package is already strict.
 
 ### Credential isolation
 
