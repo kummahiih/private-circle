@@ -8,7 +8,7 @@ Ship a **static** site that stays unreadable until the visitor enters a matching
 - Hashes are **page-scoped** via `pageId`
 - Build-time AES-256-GCM + XOR masks
 - Same-origin enrollment (from `@kummahiih/circle-enroll`) for PRF support
-- **Strict CSP**: same-origin static assets only (`script-src` / `style-src` `'self'`)
+- **Strict CSP**: same-origin static assets only (`script-src` / `style-src` `'self'`; no `'unsafe-inline'`)
 
 ## AI Disclosure
 
@@ -46,6 +46,8 @@ private-circle init [--dir <path>]
 ```
 
 Encrypt copies enroll into `dist/` and **locks pageId** to `--page-id` (`data-page-id` + `data-lock-page-id="1"` on `<html>`). The public circle-enroll site stays editable. Pass `--no-lock-page-id` to leave the enroll field editable.
+
+Search order for `enroll.html`: consumer cwd → `assets/enroll.html` → `@kummahiih/circle-enroll` package. A forked cwd file with inline CSS will be deployed instead of the package and will force `'unsafe-inline'`. Delete the fork or keep it in sync with circle-enroll (`enroll.css`, no `<style>`).
 
 Programmatic: `encryptPage({ ..., lockPageId: false })`.
 
@@ -91,7 +93,7 @@ index.html         Content-Type: text/html; charset=utf-8
 enroll.html        Content-Type: text/html; charset=utf-8
 enroll.css         Content-Type: text/css
 enroll-*.js        Content-Type: application/javascript
-all responses      Content-Security-Policy: default-src 'none'; … (match loader meta; no 'unsafe-inline')
+all responses      Content-Security-Policy matching the page (no 'unsafe-inline')
 ```
 
 See also [`assets/security.md`](assets/security.md), [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md), and [`@kummahiih/circle-enroll` README](https://github.com/kummahiih/circle-enroll).
@@ -111,25 +113,27 @@ Demo sites (e.g. hello-circle) may keep **labeled public demo hashes** only. Pro
 
 ## Strict CSP
 
-**Same-origin static files only** — no inline scripts/styles, no nonces, no third-party hosts.
+**Same-origin static files only** — no inline scripts/styles, no `'unsafe-inline'`, no nonces, no third-party hosts.
 
 | File | Role | CSP |
 |------|------|-----|
 | `index.html` | Shell only | no executable code |
-| `gate.js` | Unlock logic | `script-src 'self'` |
-| `gate.css` | Styles | `style-src 'self'` |
+| `gate.js` | Unlock logic | `script-src 'self'` (gate header also allows `blob:`) |
+| `gate.css` | Styles | `style-src 'self'` (gate header also allows `blob:`) |
 | `gate-config.json` | Per-build secrets | `connect-src 'self'` |
-| `enroll.html` + `enroll.css` + `enroll-*.js` | Enrollment | same pattern; enroll meta uses `connect-src 'none'` |
+| `enroll.html` + `enroll.css` + `enroll-*.js` | Enrollment | `script-src 'self'; style-src 'self'; connect-src 'none'` |
 
 Default meta CSP on the gate loader:
 
 ```
 default-src 'none'; base-uri 'none'; form-action 'none';
-script-src 'self'; style-src 'self'; connect-src 'self';
+script-src 'self' blob:; style-src 'self' blob:; connect-src 'self';
 img-src 'none'; font-src 'none'; object-src 'none'; frame-ancestors 'none'
 ```
 
-Recommended HTTP header (e.g. Vercel) should match. Do not add `'unsafe-inline'`.
+Enroll meta/header omits `blob:` and uses `connect-src 'none'`. Recommended HTTP headers should match those metas. Do not add `'unsafe-inline'`.
+
+`blob:` exists so multifile decrypt can rewrite extra JS/CSS to blob URLs. It is not a substitute for moving enroll styles into `enroll.css`.
 
 ## Tests
 
